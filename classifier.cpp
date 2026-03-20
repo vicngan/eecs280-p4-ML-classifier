@@ -8,6 +8,34 @@ public:
     //initialize total to 0 
     Classifier() : total_posts(0) {}
 
+    void train(csvstream &is){
+        std::map<std::string, std::string> row;
+
+        //iterate through each post 
+        while (is >>row){
+            std::string label = row["label"];
+            std::string text = row["content"];
+
+            //increment total post count 
+            total_posts++;
+
+            //increment count for label 
+            labeled_posts[label]++;
+
+            //get unique words 
+            std::set<std::string> words = unique_words(text);
+
+            //update word counts 
+            for (const std::string &word : words){
+                vocabulary.insert(word); //add to global vocab list 
+                word_posts[word]++; //increment global word count 
+                label_word_counts[label][word]++; //increment word count for specific label 
+
+            }
+
+        }
+    }
+
 private:
     //parameters for the classifier
 
@@ -15,7 +43,7 @@ private:
     int total_posts;
     std::set<std::string> vocabulary;
 
-    //hashmap (key:value)
+    //hashmap (sorted key:value)
     std::map<std::string, int> labeled_posts; //use as numerator of P(C) and denominator of P(w|C)
     std::map<std::string, int> word_posts; //Log-Likelihood P(w|C) numerator
 

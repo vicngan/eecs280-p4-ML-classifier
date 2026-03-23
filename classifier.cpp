@@ -1,6 +1,7 @@
 #include<iostream>
 #include <set>
 #include <vector>
+#include <cmath>
 #include "csvstream.hpp"
 
 class Classifier {
@@ -36,7 +37,38 @@ public:
         }
     }
 
+    //main prediction; return a pair: {winning label, score}
+    std::pair<std::string, double> predict(const std::set<std::string> &test)const {
+        std::string best_label; 
+        double max_score = -std::numeric_limits<double>::infinity(); //start with the smallest value (neg infinity)
+
+        //loop through every learned label 
+        for(auto const& [label, count]:labeled_posts){
+            double current_score = calculate_score(label, test);
+            if (current_score > max_score){
+                max_score = current_score;
+                best_label = label;
+            }
+        }
+        return {best_label, max_score};
+    }
+
 private:
+    //calculate total score for specific label 
+    double log_prior(const std::string &label) const {
+        return std::log((double)labeled_posts.at(label)/total_posts);
+    }
+    double log_likelihood(const std::string &label, const std::string &word) const {
+    
+    }
+    double calculate_score(const std::string &label, const std::set<std::string> &words) const {
+        double score = log_prior(label);
+        for (const std::string &word : words){
+            score += log_likelihood(label, word);
+        }
+        return score;
+    }
+
     //parameters for the classifier
 
     //denominator of the Log-Prior P(C)

@@ -23,7 +23,8 @@ public:
     //initialize total to 0 
     Classifier() : total_posts(0) {}
 
-    void train(csvstream &is){
+    void train(csvstream &is, bool debug = false){
+        if (debug) std::cout << "training data: \n";
         std::map<std::string, std::string> row;
 
         //iterate through each post 
@@ -31,13 +32,19 @@ public:
             std::string label = row["label"];
             std::string text = row["content"];
 
+            //print if debug is true
+            if (debug){
+                std::cout << "label = " << label << ", content = " << text << "\n";
+            }
+
             //increment total post count 
             total_posts++;
 
             //increment count for label 
             labeled_posts[label]++;
 
-            //get unique words 
+            //get unique words
+            //split a post's content into unique tokens using whitespace and return a set 
             std::set<std::string> words = unique_words(text);
 
             //update word counts 
@@ -50,6 +57,28 @@ public:
 
         }
     }
+    void print_debug() const {
+    std::cout << "classes:\n";
+    for (const auto &entry : labeled_posts) { //loop var is a read-only reference to each item, not a copy 
+        const std::string &label = entry.first; //key
+        int count = entry.second; //value 
+        std::cout << "  " << label << ", " << count << " examples, log-prior = "
+                  << log_prior(label) << "\n";
+    }
+
+    std::cout << "classifier parameters:\n";
+    for (const auto &label_entry : label_word_counts) {
+        const std::string &label = label_entry.first;
+        const std::map<std::string, int> &words = label_entry.second;
+        for (const auto &word_entry : words) {
+            const std::string &word = word_entry.first;
+            int count = word_entry.second;
+            std::cout << "  " << label << ":" << word << ", count = " << count
+                      << ", log-likelihood = " << log_likelihood(label, word) << "\n";
+        }
+    }
+    std::cout << "\n";
+}
 
     //main prediction; return a pair: {winning label, score}
     std::pair<std::string, double> predict(const std::set<std::string> &test)const {
@@ -122,13 +151,28 @@ std::set<std::string> unique_words(const std::string &str) {
 }
 //main function implementation
 int main(int argc, char *argv[]) {
+    bool debug = false;
+    int arg_idx = 1;
+
+    //--debug flag
+    if (argc > 1 && std::string(argv[1]) == "--debug"){
+        debug = true;
+        arg_idx++;
+    }
+
+    if (argc - arg_idx < 1 || argc - arg_idx > 2){
+        std::cout << "Usage: main.exe [--debug] TRAIN_FILE.csv [TEST_FILE.csv]\n"; 
+        return -1;
+    }
+
     if (argc != 3){
         std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv" << std::endl;
         return -1;
     }
-
-    std::string train_file = argv[1];
-    std::string test_file = argv[2];
+    //uses the current index as test_file and increment arg_idx; text_file checks whether another argument is available, 
+    //if not, test_file becomes and empty string 
+    std::string train_file = argv[arg_idx++];
+    std::string test_file = (arg_idx < argc) ? argv[arg_idx] : "";
 
     try{
         //open train file and train 
@@ -136,11 +180,18 @@ int main(int argc, char *argv[]) {
         Classifier classifier;
 
         std::cout << "training data: " << std::endl;
-        classifier.train(train_stream);
+        classifier.train(train_stream, debug);
 
         std::cout << "trained on " << classifier.get_total() << " examples " << std::endl;
-        std::cout << "vocabulary size: " << classifier.get_vocab_size() << std::endl;
-        std::cout << std::endl; 
+        if (debug){
+            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
+        } else {
+            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n";
+        }
+        
+        if (debug) {
+            classifier.print_debug();
+        }
 
         //open testing fie 
         csvstream test_stream(test_file);

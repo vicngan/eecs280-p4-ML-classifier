@@ -151,24 +151,22 @@ std::set<std::string> unique_words(const std::string &str) {
 }
 //main function implementation
 int main(int argc, char *argv[]) {
+    std::cout.precision(3);
     bool debug = false;
     int arg_idx = 1;
 
-    //--debug flag
-    if (argc > 1 && std::string(argv[1]) == "--debug"){
-        debug = true;
-        arg_idx++;
-    }
-
-    if (argc - arg_idx < 1 || argc - arg_idx > 2){
-        std::cout << "Usage: main.exe [--debug] TRAIN_FILE.csv [TEST_FILE.csv]\n"; 
+    if (argc != 2 && argc != 3){
+        std::cout << "Usage: main.exe TRAIN_FILE.csv [TEST_FILE.csv]\n"; 
         return -1;
     }
 
     //uses the current index as test_file and increment arg_idx; text_file checks whether another argument is available, 
     //if not, test_file becomes and empty string 
-    std::string train_file = argv[arg_idx++];
-    std::string test_file = (arg_idx < argc) ? argv[arg_idx] : "";
+    std::string train_file = argv[1];
+    std::string test_file = (argc == 3) ? argv[2] : "";
+
+    bool train_only = (argc == 2);
+
 
     try{
         //open train file and train 
@@ -179,13 +177,13 @@ int main(int argc, char *argv[]) {
         std::cout << "trained on " << classifier.get_total() << " examples\n";
 
         //only print vocab and math if debug is on 
-        if (debug){
+        if (train_only){
             std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
             classifier.print_debug();
         }
         //if test file provided, run
-        if (!test_file.empty()){
-            if (!debug) std::cout << "\n";
+        if (!train_only){
+            std::cout << "\n";
         
             //open testing fie 
             csvstream test_stream(test_file);
@@ -193,6 +191,7 @@ int main(int argc, char *argv[]) {
             int correct_predict = 0;
             int total_test_posts = 0;
             std::map<std::string, std::string>row;
+
             std::cout << "test data:\n"; 
 
             //loop through each row in the test file 

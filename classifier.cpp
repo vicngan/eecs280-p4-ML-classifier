@@ -34,7 +34,7 @@ public:
 
             //print if debug is true
             if (debug){
-                std::cout << "label = " << label << ", content = " << text << "\n";
+                std::cout << "  label = " << label << ", content = " << text << "\n";
             }
 
             //increment total post count 
@@ -175,10 +175,8 @@ int main(int argc, char *argv[]) {
         csvstream train_stream(train_file);
         Classifier classifier;
 
-        std::cout << "training data: " << std::endl;
         classifier.train(train_stream, debug);
-
-        std::cout << "trained on " << classifier.get_total() << " examples " << std::endl;
+        std::cout << "trained on " << classifier.get_total() << " examples\n";
 
         //only print vocab and math if debug is on 
         if (debug){
@@ -195,7 +193,7 @@ int main(int argc, char *argv[]) {
             int correct_predict = 0;
             int total_test_posts = 0;
             std::map<std::string, std::string>row;
-            std::cout << "test data: " << std::endl; 
+            std::cout << "test data:\n"; 
 
             //loop through each row in the test file 
             while(test_stream >> row){
@@ -206,7 +204,6 @@ int main(int argc, char *argv[]) {
                 std::set<std::string> test_words = unique_words(text);
                 
                 //prediction 
-                std::set<std::string> test_words = unique_words(text);
                 std::pair<std::string, double> prediction = classifier.predict(test_words);
 
                 if(prediction.first == label){
@@ -215,11 +212,11 @@ int main(int argc, char *argv[]) {
                 total_test_posts++;
 
                 //print result per post 
-                std::cout << "correct = " << label << ", predicted = " << prediction.first << ", log-probability score =  " << prediction.second << "\n";
-                std::cout << " content = " << text << std::endl;
+                std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score =  " << prediction.second << "\n";
+                std::cout << "  content = " << text << "\n\n";
             }
             //print performance summary 
-            std::cout << "performance: " << correct_predict << " / " << total_test_posts << "posts predicted correctly\n" ;
+            std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n" ;
         } 
     }
     //catch file not found error 

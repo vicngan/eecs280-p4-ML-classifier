@@ -29,7 +29,7 @@ public:
 
         //iterate through each post 
         while (is >>row){
-            std::string label = row["label"];
+            std::string label = row["tag"];
             std::string text = row["content"];
 
             //print if debug is true
@@ -165,10 +165,6 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    if (argc != 3){
-        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv" << std::endl;
-        return -1;
-    }
     //uses the current index as test_file and increment arg_idx; text_file checks whether another argument is available, 
     //if not, test_file becomes and empty string 
     std::string train_file = argv[arg_idx++];
@@ -183,51 +179,49 @@ int main(int argc, char *argv[]) {
         classifier.train(train_stream, debug);
 
         std::cout << "trained on " << classifier.get_total() << " examples " << std::endl;
+
+        //only print vocab and math if debug is on 
         if (debug){
             std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
-        } else {
-            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n";
-        }
-        
-        if (debug) {
             classifier.print_debug();
         }
+        //if test file provided, run
+        if (!test_file.empty()){
+            if (!debug) std::cout << "\n";
+        
+            //open testing fie 
+            csvstream test_stream(test_file);
 
-        //open testing fie 
-        csvstream test_stream(test_file);
+            int correct_predict = 0;
+            int total_test_posts = 0;
+            std::map<std::string, std::string>row;
+            std::cout << "test data: " << std::endl; 
 
-        int correct_predict = 0;
-        int total_test_posts = 0;
-        std::map<std::string, std::string>row;
-        std::cout << "testing data: " << std::endl; 
+            //loop through each row in the test file 
+            while(test_stream >> row){
+                std::string label = row["tag"];
+                std::string text = row["content"];
 
-        //loop through each row in the test file 
-        while(test_stream >> row){
-            std::string label = row["label"];
-            std::string text = row["content"];
+                //extract unique words 
+                std::set<std::string> test_words = unique_words(text);
+                
+                //prediction 
+                std::set<std::string> test_words = unique_words(text);
+                std::pair<std::string, double> prediction = classifier.predict(test_words);
 
-            //extract unique words 
-            std::set<std::string> test_words = unique_words(text);
-            
-            //prediction 
-            std::pair<std::string, double> prediction = classifier.predict(test_words);
-            std::string predicted_label = prediction.first; 
-            double score = prediction.second;
+                if(prediction.first == label){
+                    correct_predict++;
+                }
+                total_test_posts++;
 
-            //accuracy 
-            total_test_posts++;
-            if (predicted_label == label){
-                correct_predict++;
+                //print result per post 
+                std::cout << "correct = " << label << ", predicted = " << prediction.first << ", log-probability score =  " << prediction.second << "\n";
+                std::cout << " content = " << text << std::endl;
             }
-
-            //print result per post 
-            std::cout << "correct = " << label << ", predicted = " << predicted_label << ", score = " << score << std::endl;
-            std::cout << " content = " << text << std::endl;
-            std::cout << std::endl;  
-        }
-        //print performance summary 
-        std::cout << "performance: " << correct_predict << " / " << total_test_posts << "posts correctly predicted " << std::endl;
-    } 
+            //print performance summary 
+            std::cout << "performance: " << correct_predict << " / " << total_test_posts << "posts predicted correctly\n" ;
+        } 
+    }
     //catch file not found error 
     catch (const csvstream_exception &e) {
         std::cout << e.what() << std::endl;

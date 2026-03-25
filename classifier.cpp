@@ -57,7 +57,8 @@ public:
         double max_score = -std::numeric_limits<double>::infinity(); //start with the smallest value (neg infinity)
 
         //loop through every learned label 
-        for(auto const& [label, count]:labeled_posts){
+        for (const auto &entry : labeled_posts) {
+            const std::string &label = entry.first;
             double current_score = calculate_score(label, test);
             if (current_score > max_score){
                 max_score = current_score;
@@ -176,6 +177,7 @@ int main(int argc, char *argv[]) {
         //print performance summary 
         std::cout << "performance: " << correct_predict << " / " << total_test_posts << "posts correctly predicted " << std::endl;
     } 
+    //catch file not found error 
     catch (const csvstream_exception &e) {
         std::cout << e.what() << std::endl;
         return -1;

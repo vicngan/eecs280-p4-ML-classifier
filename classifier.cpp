@@ -4,12 +4,22 @@
 #include <set>
 #include <vector>
 #include <cmath>
+#include <limits>
+#include <string>
 #include "csvstream.hpp"
 
 std::set<std::string> unique_words(const std::string &str);
 
 class Classifier {
 public: 
+    //getter function 
+    int get_total() const{
+        return total_posts;
+    }
+    int get_vocab_size() const{
+        return vocabulary.size();
+    }
+
     //initialize total to 0 
     Classifier() : total_posts(0) {}
 
@@ -107,4 +117,68 @@ std::set<std::string> unique_words(const std::string &str) {
         words.insert(word); 
     } 
     return words;
+
+}
+//main function implementation
+int main(int argc, char *argv[]) {
+    if (argc != 3){
+        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv" << std::endl;
+        return -1;
+    }
+
+    std::string train_file = argv[1];
+    std::string test_file = argv[2];
+
+    try{
+        //open train file and train 
+        csvstream train_stream(train_file);
+        Classifier classifier;
+
+        std::cout << "training data: " << std::endl;
+        classifier.train(train_stream);
+
+        std::cout << "trained on " << classifier.get_total() << " examples " << std::endl;
+        std::cout << "vocabulary size: " << classifier.get_vocab_size() << std::endl;
+        std::cout << std::endl; 
+
+        //open testing fie 
+        csvstream test_stream(test_file);
+
+        int correct_predict = 0;
+        int total_test_posts = 0;
+        std::map<std::string, std::string>row;
+        std::cout << "testing data: " << std::endl; 
+
+        //loop through each row in the test file 
+        while(test_stream >> row){
+            std::string label = row["label"];
+            std::string text = row["content"];
+
+            //extract unique words 
+            std::set<std::string> test_words = unique_words(text);
+            
+            //prediction 
+            std::pair<std::string, double> prediction = classifier.predict(test_words);
+            std::string predicted_label = prediction.first; 
+            double score = prediction.second;
+
+            //accuracy 
+            total_test_posts++;
+            if (predicted_label == label){
+                correct_predict++;
+            }
+
+            //print result per post 
+            std::cout << "correct = " << label << ", predicted = " << predicted_label << ", score = " << score << std::endl;
+            std::cout << " content = " << text << std::endl;
+            std::cout << std::endl;  
+        }
+        //print performance summary 
+        std::cout << "performance: " << correct_predict << " / " << total_test_posts << "posts correctly predicted " << std::endl;
+    } 
+    catch (const csvstream_exception &e) {
+        std::cout << e.what() << std::endl;
+        return -1;
+    }
+    return 0;
 }

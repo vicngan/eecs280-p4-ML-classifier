@@ -153,10 +153,10 @@ std::set<std::string> unique_words(const std::string &str) {
 int main(int argc, char *argv[]) {
     std::cout.precision(3);
     bool debug = false;
-    int arg_idx = 1;
+    
 
     if (argc != 2 && argc != 3){
-        std::cout << "Usage: main.exe TRAIN_FILE.csv [TEST_FILE.csv]\n"; 
+        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n"; 
         return -1;
     }
 
@@ -176,11 +176,7 @@ int main(int argc, char *argv[]) {
         classifier.train(train_stream, debug);
         std::cout << "trained on " << classifier.get_total() << " examples\n";
 
-        //only print vocab and math if debug is on 
-        if (train_only){
-            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
-            classifier.print_debug();
-        }
+
         //if test file provided, run
         if (!train_only){
             std::cout << "\n";
@@ -211,11 +207,11 @@ int main(int argc, char *argv[]) {
                 total_test_posts++;
 
                 //print result per post 
-                std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score =  " << prediction.second << "\n";
+                std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score = " << prediction.second << "\n";
                 std::cout << "  content = " << text << "\n\n";
             }
             //print performance summary 
-            std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n" ;
+            std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
         } 
     }
     //catch file not found error 

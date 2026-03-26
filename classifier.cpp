@@ -1,3 +1,4 @@
+}
 #include<iostream>
 #include <sstream> 
 #include <map>  
@@ -163,10 +164,11 @@ int main(int argc, char *argv[]) {
     //uses the current index as test_file and increment arg_idx; text_file checks whether another argument is available, 
     //if not, test_file becomes and empty string 
     std::string train_file = argv[1];
-    std::string test_file = (argc == 3) ? argv[2] : "";
+    std::string test_file = argv[2];
 
-    bool train_only = (argc == 2);
-
+    if (argc == 4 && std::string(argv[3]) == "--debug") {
+        debug = true;
+    }
 
     try{
         //open train file and train 
@@ -175,13 +177,16 @@ int main(int argc, char *argv[]) {
 
         classifier.train(train_stream, debug);
         std::cout << "trained on " << classifier.get_total() << " examples\n";
+        std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n";
 
 
-        //if test file provided, run
-        if (!train_only){
+        if (debug) {
             std::cout << "\n";
-        
-            //open testing fie 
+            classifier.print_debug();
+        }
+           std::cout << "\n";
+
+            //open testing file 
             csvstream test_stream(test_file);
 
             int correct_predict = 0;
@@ -211,10 +216,8 @@ int main(int argc, char *argv[]) {
                 std::cout << "  content = " << text << "\n\n";
             }
             //print performance summary 
-            std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
-        } 
+    std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
     }
-    //catch file not found error 
     catch (const csvstream_exception &e) {
         std::cout << e.what() << std::endl;
         return -1;

@@ -1,4 +1,3 @@
-}
 #include<iostream>
 #include <sstream> 
 #include <map>  
@@ -156,7 +155,7 @@ int main(int argc, char *argv[]) {
     bool debug = false;
     
 
-    if (argc != 2 && argc != 3){
+    if (argc < 3 || argc > 4){
         std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n"; 
         return -1;
     }

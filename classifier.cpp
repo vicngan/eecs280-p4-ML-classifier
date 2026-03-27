@@ -51,39 +51,43 @@ public:
             for (const std::string &word : words){
                 vocabulary.insert(word); //add to global vocab list 
                 word_posts[word]++; //increment global word count 
-                label_word_counts[label][word]++; //increment word count for specific label 
+                // increment word count for specific label
+                label_word_counts[label][word]++;
 
             }
 
         }
     }
     void print_debug() const {
-    std::cout << "classes:\n";
-    for (const auto &entry : labeled_posts) { //loop var is a read-only reference to each item, not a copy 
-        const std::string &label = entry.first; //key
-        int count = entry.second; //value 
-        std::cout << "  " << label << ", " << count << " examples, log-prior = "
-                  << log_prior(label) << "\n";
-    }
-
-    std::cout << "classifier parameters:\n";
-    for (const auto &label_entry : label_word_counts) {
-        const std::string &label = label_entry.first;
-        const std::map<std::string, int> &words = label_entry.second;
-        for (const auto &word_entry : words) {
-            const std::string &word = word_entry.first;
-            int count = word_entry.second;
-            std::cout << "  " << label << ":" << word << ", count = " << count
-                      << ", log-likelihood = " << log_likelihood(label, word) << "\n";
+        std::cout << "classes:\n";
+        for (const auto &entry : labeled_posts) {
+            const std::string &label = entry.first;
+            int count = entry.second;
+            std::cout << "  " << label << ", " << count
+                      << " examples, log-prior = " << log_prior(label) << "\n";
         }
+
+        std::cout << "classifier parameters:\n";
+        for (const auto &label_entry : label_word_counts) {
+            const std::string &label = label_entry.first;
+            const std::map<std::string, int> &words = label_entry.second;
+            for (const auto &word_entry : words) {
+                const std::string &word = word_entry.first;
+                int count = word_entry.second;
+                std::cout << "  " << label << ":" << word << ", count = "
+                          << count << ", log-likelihood = "
+                          << log_likelihood(label, word) << "\n";
+            }
+        }
+        std::cout << "\n";
     }
-    std::cout << "\n";
-}
 
     //main prediction; return a pair: {winning label, score}
-    std::pair<std::string, double> predict(const std::set<std::string> &test)const {
+    std::pair<std::string, double> predict(
+        const std::set<std::string> &test) const {
         std::string best_label; 
-        double max_score = -std::numeric_limits<double>::infinity(); //start with the smallest value (neg infinity)
+        // start with the smallest value (negative infinity)
+        double max_score = -std::numeric_limits<double>::infinity();
 
         //loop through every learned label 
         for (const auto &entry : labeled_posts) {
@@ -102,27 +106,29 @@ private:
     double log_prior(const std::string &label) const {
         return std::log((double)labeled_posts.at(label)/total_posts);
     }
-    double log_likelihood(const std::string &label, const std::string &word) const {
-    auto label_it = label_word_counts.find(label); //look up label -> word -> counts in map 
-    //if we have counts for the label 
-    if (label_it != label_word_counts.end()) {
-        //look up specific word for the label 
-        auto word_it = label_it->second.find(word);
-        if (word_it != label_it->second.end()) {
-            // P(word | label) = count(label, word)
-            return std::log((double)word_it->second / labeled_posts.at(label));
+    double log_likelihood(const std::string &label,
+                          const std::string &word) const {
+        // look up label -> word -> counts in map 
+        auto label_it = label_word_counts.find(label);
+        if (label_it != label_word_counts.end()) {
+            auto word_it = label_it->second.find(word);
+            if (word_it != label_it->second.end()) {
+                // P(word | label) = count(label, word)
+                return std::log((double)word_it->second
+                                / labeled_posts.at(label));
+            }
         }
+        // if no word found under this label, back off to global probability
+        auto global = word_posts.find(word);
+        if (global != word_posts.end()) {
+            // P(word) = (# posts containing word) / total_posts
+            return std::log((double)global->second / total_posts);
+        }
+        // unseen word: use tiny probability 1 / total_posts
+        return std::log(1.0 / total_posts);
     }
-    //if no word found under this label, expand it to global probability  
-    auto global = word_posts.find(word);
-    if (global != word_posts.end()) {
-        // P(word) = (# posts containing word) / total_posts
-        return std::log((double)global->second / total_posts);
-    }
-    //If the word has never been seen at all, use a tiny “unknown word” probability: 1 / total_posts
-    return std::log(1.0 / total_posts);
-}
-    double calculate_score(const std::string &label, const std::set<std::string> &words) const {
+    double calculate_score(const std::string &label,
+                           const std::set<std::string> &words) const {
         double score = log_prior(label);
         for (const std::string &word : words){
             score += log_likelihood(label, word);
@@ -137,7 +143,8 @@ private:
     std::set<std::string> vocabulary;
 
     //hashmap (sorted key:value)
-    std::map<std::string, int> labeled_posts; //use as numerator of P(C) and denominator of P(w|C)
+    // use as numerator of P(C) and denominator of P(w|C)
+    std::map<std::string, int> labeled_posts;
     std::map<std::string, int> word_posts; //Log-Likelihood P(w|C) numerator
 
     //nested map (key:label, value:map<word, count>)
@@ -155,93 +162,111 @@ std::set<std::string> unique_words(const std::string &str) {
     return words;
 
 }
+
+//define struct 
+struct ProgramOptions {
+    std::string train_file;
+    std::string test_file;
+    bool debug = false;
+    bool has_test_file = false;
+};
+
+void print_usage() {
+    std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n";
+}
+
+bool parse_args(int argc, char *argv[], ProgramOptions &options) {
+    if (argc == 2) {
+        options.train_file = argv[1];
+        options.debug = true;
+        return true;
+    }
+    if (argc == 3) {
+        options.train_file = argv[1];
+        if (std::string(argv[2]) == "--debug") {
+            options.debug = true;
+        } else {
+            options.test_file = argv[2];
+            options.has_test_file = true;
+        }
+        return true;
+    }
+    if (argc == 4) {
+        options.train_file = argv[1];
+        options.test_file = argv[2];
+        options.has_test_file = true;
+        if (std::string(argv[3]) == "--debug") {
+            options.debug = true;
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+void run_tests(const Classifier &classifier, const std::string &test_file) {
+    csvstream test_stream(test_file);
+    int correct_predict = 0;
+    int total_test_posts = 0;
+    std::map<std::string, std::string> row;
+
+    std::cout << "test data:\n"; 
+
+    while (test_stream >> row) {
+        std::string label = row["tag"];
+        std::string text = row["content"];
+
+        std::set<std::string> test_words = unique_words(text);
+        std::pair<std::string, double> prediction =
+            classifier.predict(test_words);
+
+        if (prediction.first == label) {
+            correct_predict++;
+        }
+        total_test_posts++;
+
+        std::cout << "  correct = " << label
+                  << ", predicted = " << prediction.first
+                  << ", log-probability score = " << prediction.second << "\n";
+        std::cout << "  content = " << text << "\n\n";
+    }
+    std::cout << "performance: " << correct_predict << " / "
+              << total_test_posts
+              << " posts predicted correctly\n";
+}
+
 //main function implementation
 int main(int argc, char *argv[]) {
     std::cout.precision(3);
-    bool debug = false;
-    bool has_test_file = false;
+    ProgramOptions options;
 
-    std::string train_file;
-    std::string test_file;
-
-    if (argc == 2) {
-        train_file = argv[1];
-        debug = true;
-    } else if (argc == 3) {
-        train_file = argv[1];
-        if (std::string(argv[2]) == "--debug") {
-            debug = true;
-        } else {
-            test_file = argv[2];
-            has_test_file = true;
-        }
-    } else if (argc == 4) {
-        train_file = argv[1];
-        test_file = argv[2];
-        has_test_file = true;
-        if (std::string(argv[3]) == "--debug") {
-            debug = true;
-        } else {
-            std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n";
-            return -1;
-        }
-    } else {
-        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n";
+    if (!parse_args(argc, argv, options)) {
+        print_usage();
         return -1;
     }
 
-    try{
-        //open train file and train 
-        csvstream train_stream(train_file);
+    try {
+        csvstream train_stream(options.train_file);
         Classifier classifier;
 
-        classifier.train(train_stream, debug);
-        std::cout << "trained on " << classifier.get_total() << " examples\n";
+        classifier.train(train_stream, options.debug);
+        std::cout << "trained on " << classifier.get_total()
+                  << " examples\n";
 
-        if (debug) {
-            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
+        if (options.debug) {
+            std::cout << "vocabulary size = " << classifier.get_vocab_size()
+                      << "\n\n";
             classifier.print_debug();
         } else {
             std::cout << "\n";
         }
 
-        if (!has_test_file) {
+        if (!options.has_test_file) {
             return 0;
         }
 
-        //open testing file 
-        csvstream test_stream(test_file);
-
-        int correct_predict = 0;
-        int total_test_posts = 0;
-        std::map<std::string, std::string>row;
-
-        std::cout << "test data:\n"; 
-
-        //loop through each row in the test file 
-        while(test_stream >> row){
-            std::string label = row["tag"];
-            std::string text = row["content"];
-
-            //extract unique words 
-            std::set<std::string> test_words = unique_words(text);
-            
-            //prediction 
-            std::pair<std::string, double> prediction = classifier.predict(test_words);
-
-            if(prediction.first == label){
-                correct_predict++;
-            }
-            total_test_posts++;
-
-            //print result per post 
-            std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score = " << prediction.second << "\n";
-            std::cout << "  content = " << text << "\n\n";
-        }
-        //print performance summary 
-        std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
-    }
-    catch (const csvstream_exception &e) {
+        run_tests(classifier, options.test_file);
+    } catch (const csvstream_exception &e) {
         std::cout << e.what() << std::endl;
         return -1;
     }

@@ -103,17 +103,23 @@ private:
         return std::log((double)labeled_posts.at(label)/total_posts);
     }
     double log_likelihood(const std::string &label, const std::string &word) const {
-    auto label_it = label_word_counts.find(label);
+    auto label_it = label_word_counts.find(label); //look up label -> word -> counts in map 
+    //if we have counts for the label 
     if (label_it != label_word_counts.end()) {
+        //look up specific word for the label 
         auto word_it = label_it->second.find(word);
         if (word_it != label_it->second.end()) {
+            // P(word | label) = count(label, word)
             return std::log((double)word_it->second / labeled_posts.at(label));
         }
     }
-    auto gw = word_posts.find(word);
-    if (gw != word_posts.end()) {
-        return std::log((double)gw->second / total_posts);
+    //if no word found under this label, expand it to global probability  
+    auto global = word_posts.find(word);
+    if (global != word_posts.end()) {
+        // P(word) = (# posts containing word) / total_posts
+        return std::log((double)global->second / total_posts);
     }
+    //If the word has never been seen at all, use a tiny “unknown word” probability: 1 / total_posts
     return std::log(1.0 / total_posts);
 }
     double calculate_score(const std::string &label, const std::set<std::string> &words) const {

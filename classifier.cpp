@@ -24,7 +24,7 @@ public:
     Classifier() : total_posts(0) {}
 
     void train(csvstream &is, bool debug = false){
-        if (debug) std::cout << "training data: \n";
+        if (debug) std::cout << "training data:\n";
         std::map<std::string, std::string> row;
 
         //iterate through each post 
@@ -153,20 +153,35 @@ std::set<std::string> unique_words(const std::string &str) {
 int main(int argc, char *argv[]) {
     std::cout.precision(3);
     bool debug = false;
-    
+    bool has_test_file = false;
 
-    if (argc < 3 || argc > 4){
-        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n"; 
-        return -1;
-    }
+    std::string train_file;
+    std::string test_file;
 
-    //uses the current index as test_file and increment arg_idx; text_file checks whether another argument is available, 
-    //if not, test_file becomes and empty string 
-    std::string train_file = argv[1];
-    std::string test_file = argv[2];
-
-    if (argc == 4 && std::string(argv[3]) == "--debug") {
+    if (argc == 2) {
+        train_file = argv[1];
         debug = true;
+    } else if (argc == 3) {
+        train_file = argv[1];
+        if (std::string(argv[2]) == "--debug") {
+            debug = true;
+        } else {
+            test_file = argv[2];
+            has_test_file = true;
+        }
+    } else if (argc == 4) {
+        train_file = argv[1];
+        test_file = argv[2];
+        has_test_file = true;
+        if (std::string(argv[3]) == "--debug") {
+            debug = true;
+        } else {
+            std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n";
+            return -1;
+        }
+    } else {
+        std::cout << "Usage: main.exe TRAIN_FILE.csv TEST_FILE.csv [--debug]\n";
+        return -1;
     }
 
     try{
@@ -176,46 +191,49 @@ int main(int argc, char *argv[]) {
 
         classifier.train(train_stream, debug);
         std::cout << "trained on " << classifier.get_total() << " examples\n";
-        std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n";
-
 
         if (debug) {
-            std::cout << "\n";
+            std::cout << "vocabulary size = " << classifier.get_vocab_size() << "\n\n";
             classifier.print_debug();
+        } else {
+            std::cout << "\n";
         }
-           std::cout << "\n";
 
-            //open testing file 
-            csvstream test_stream(test_file);
+        if (!has_test_file) {
+            return 0;
+        }
 
-            int correct_predict = 0;
-            int total_test_posts = 0;
-            std::map<std::string, std::string>row;
+        //open testing file 
+        csvstream test_stream(test_file);
 
-            std::cout << "test data:\n"; 
+        int correct_predict = 0;
+        int total_test_posts = 0;
+        std::map<std::string, std::string>row;
 
-            //loop through each row in the test file 
-            while(test_stream >> row){
-                std::string label = row["tag"];
-                std::string text = row["content"];
+        std::cout << "test data:\n"; 
 
-                //extract unique words 
-                std::set<std::string> test_words = unique_words(text);
-                
-                //prediction 
-                std::pair<std::string, double> prediction = classifier.predict(test_words);
+        //loop through each row in the test file 
+        while(test_stream >> row){
+            std::string label = row["tag"];
+            std::string text = row["content"];
 
-                if(prediction.first == label){
-                    correct_predict++;
-                }
-                total_test_posts++;
+            //extract unique words 
+            std::set<std::string> test_words = unique_words(text);
+            
+            //prediction 
+            std::pair<std::string, double> prediction = classifier.predict(test_words);
 
-                //print result per post 
-                std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score = " << prediction.second << "\n";
-                std::cout << "  content = " << text << "\n\n";
+            if(prediction.first == label){
+                correct_predict++;
             }
-            //print performance summary 
-    std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
+            total_test_posts++;
+
+            //print result per post 
+            std::cout << "  correct = " << label << ", predicted = " << prediction.first << ", log-probability score = " << prediction.second << "\n";
+            std::cout << "  content = " << text << "\n\n";
+        }
+        //print performance summary 
+        std::cout << "performance: " << correct_predict << " / " << total_test_posts << " posts predicted correctly\n";
     }
     catch (const csvstream_exception &e) {
         std::cout << e.what() << std::endl;
